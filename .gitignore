@@ -1,0 +1,9 @@
+# executaveis (gerados pelo src/compilar.bat)
+*.exe
+
+# dados locais: IPs internos, senhas de SMTP, logs e perfil atual
+config.ini
+Profiles/
+UltraPing.ini
+vlans.txt
+

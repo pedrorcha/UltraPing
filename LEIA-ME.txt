@@ -1,0 +1,73 @@
+ULTRAPING - COMO COMPILAR E USAR
+================================
+(versao nova do 33Ping, com janela dinamica)
+
+O QUE FAZ
+- Le TODOS os hosts do config.ini (ate 512) e pinga todos o tempo todo.
+- Mostra na tela N paineis por pagina (WindowCount=40 -> 5 colunas x 8 linhas, paineis largos
+  para o nome do host caber). Para mais paineis por pagina, aumente em Opcoes > Hosts.
+- Quando um host falha (ping vermelho), o painel dele sobe para o primeiro lugar
+  (canto superior esquerdo) e empurra os outros para tras.
+- Se o host voltar (verde), ele fica onde esta. Outra falha toma o primeiro lugar.
+- Quem sai da area visivel continua sendo pingado em segundo plano.
+- Paginas: ◀ Pagina X/Y ▶ na barra (ou PageUp/PageDown). Pagina 1 = primeiros WindowCount hosts
+  da fila, pagina 2 = os proximos, e assim por diante. Quando um host cai, ele vai para o
+  primeiro lugar e a tela volta sozinha para a pagina 1 (uma vez por queda).
+- Hosts com Enabled=False nao aparecem nem sao pingados.
+
+COMO COMPILAR (Windows, nao precisa instalar nada)
+PASTAS
+  UltraPing.exe       o monitor (de dois cliques para abrir)
+  UltraPingViewer.exe o dashboard dos logs (historico da rede)
+  config.ini          modelo usado so na primeira execucao de um perfil novo "Default"
+  UltraPing.ini       guarda o ultimo perfil usado
+  vlans.txt           (opcional) nomes das sub-redes/VLANs para o Viewer
+  Profiles\<perfil>\  config.ini de cada perfil (o que vale de verdade) e a pasta Logs
+  src\                codigo-fonte (UltraPing.cs, UltraPingViewer.cs) e compilar.bat
+  README.md           documentacao completa (para o GitHub)
+
+1. Feche o UltraPing e o UltraPingViewer e de dois cliques em src\compilar.bat.
+2. Se aparecer "Pronto", os dois .exe da pasta principal foram atualizados.
+3. Se aparecer erro, copie o texto e envie ao Claude (ele corrige e devolve o UltraPing.cs inteiro).
+
+COMO USAR
+- A primeira execucao copia o config.ini que esta ao lado do exe para Profiles\Default\config.ini.
+  Depois disso o arquivo valido e o de Profiles\<perfil>\config.ini.
+- Para outros perfis: crie uma pasta em Profiles\ com um config.ini dentro e troque no botao "Perfil".
+- Chave nova no [Window] do config.ini: PromoteAfter=1  (quantas falhas seguidas para o host subir; 1 = ja na primeira)
+- Botao "Ordem original": volta os paineis para a ordem do arquivo.
+- Logs CSV: Profiles\<perfil>\Logs\AAAA-MM-DD\JanelaNNN.csv (NNN = posicao do host no config.ini).
+- Falso alerta (1 ping perdido): quando um ping falha, o programa faz mais [Ping] ConfirmPings
+  pings (padrao 2, com 1 s entre eles). Se algum responder, e uma OSCILACAO: painel AMARELO por
+  [Ping] UnstableMinutes (padrao 10), linha "OSCILOU" no log, sem som, sem subir, sem e-mail.
+  So fica VERMELHO (e alerta) se todos falharem. ConfirmPings=0 desliga a confirmacao.
+- Configuracao de fabrica recomendada: intervalo 10 s, timeout 2 s, 2 pings de confirmacao,
+  10 min em amarelo, som ligado (so toca em queda confirmada), e-mail apos 3 falhas.
+- Som: o mesmo do 33Ping original (tom de 1000 Hz por 150 ms), no maximo 1 bipe a cada 2 s.
+- Botao "Desativar": aparece so nos paineis vermelhos (canto superior direito, abaixo do titulo).
+  Grava Enabled=False no config.ini e tira o painel da tela.
+- Verificacao dos desativados: sempre que o programa abre E 1 vez por dia, no horario de
+  [Recheck] Time (padrao 08:00), o programa testa TODOS os hosts desativados (3 pings cada) e
+  reativa sozinho os que responderem. O painel volta no fim da fila.
+  O teste e silencioso: nao toca som, nao grava log e nao manda e-mail.
+  Chaves no config.ini:  [Recheck]  Enabled=True   Time=08:00   LastRun=(data da ultima vez, automatico)
+  Tambem da para mudar em Opcoes > Geral.
+
+ULTRAPINGVIEWER (DASHBOARD)
+- Le todos os logs CSV de Profiles\<perfil>\Logs (pode ficar aberto junto com o UltraPing).
+- Abas: Visao geral (indicadores, diagnostico automatico, graficos), Hosts (tabela ordenavel),
+  Incidentes (quedas em massa e todas as quedas), Sub-redes / VLANs, Padroes (dia x hora,
+  hosts que falham juntos, quedas repetidas) e Host (detalhe de um host).
+- Periodo: ultima hora ate "Tudo", ou personalizado.
+- "Tempo real (10 s)" (ligado por padrao): rele os logs a cada 10 s sem mexer na tela
+  (aba, rolagem, ordenacao e linha escolhida continuam onde estavam).
+- Exportar imagem (PNG da pagina inteira) e Exportar CSV (tabela de hosts).
+- Passe o mouse nos graficos para ver detalhes; clique num host para abrir o detalhe dele.
+
+DIFERENCAS EM RELACAO AO 33PING ANTIGO
+- Limite de 64 hosts removido (agora 512).
+- Opcoes > Hosts: grade com Nº, Ativo, IP e Nome. Cole do Excel (IP [tab] Nome) com Ctrl+V,
+  ou use "Colar lista de hosts..." para acrescentar no fim. Delete apaga as linhas selecionadas.
+  IP repetido e removido ao salvar.
+- Criar/duplicar/renomear/excluir perfil: faca pelo Explorer (pasta Profiles).
+- O numero no titulo do painel e a posicao do host no config.ini (nao muda quando o painel sobe).

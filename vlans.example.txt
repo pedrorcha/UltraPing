@@ -1,0 +1,4 @@
+# Exemplo de vlans.txt (copie para vlans.txt e ajuste para a sua rede).
+# Formato: rede/mascara;Nome   (linhas com # sao ignoradas; vale a mascara mais especifica)
+# Sem o vlans.txt, o UltraPingViewer agrupa os hosts por /24.
+127.0.0.0/8;Loopback
