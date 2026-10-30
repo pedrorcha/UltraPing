@@ -903,6 +903,7 @@ namespace UltraPing
             appDir = AppDomain.CurrentDomain.BaseDirectory;
             profilesDir = Path.Combine(appDir, "Profiles");
             systemIniPath = Path.Combine(appDir, "UltraPing.ini");
+            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }  // o mesmo icone do exe (assets\UltraPing.ico)
             try { Directory.CreateDirectory(profilesDir); } catch { }
 
             string name = profileArg;

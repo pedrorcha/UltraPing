@@ -1283,6 +1283,7 @@ namespace UltraPingViewer
             appDir = AppDomain.CurrentDomain.BaseDirectory;
             startHost = host;
             Text = "UltraPingViewer";
+            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }  // o mesmo icone do exe (assets\UltraPingViewer.ico)
             BackColor = Theme.Back;
             ForeColor = Theme.Text;
             Font = Fonts.Text;

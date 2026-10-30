@@ -1,5 +1,10 @@
 # UltraPing
 
+<p>
+  <img src="assets/UltraPing.svg" width="96" alt="UltraPing">
+  <img src="assets/UltraPingViewer.svg" width="96" alt="UltraPingViewer">
+</p>
+
 Monitor de ping para Windows feito para NOC e para equipes de infraestrutura e broadcast. Ele pinga centenas de hosts ao mesmo tempo, mostra na tela só o que importa, puxa para o topo quem acabou de cair e separa queda de verdade de pacote perdido.
 
 O projeto vem com dois programas:
