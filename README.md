@@ -192,3 +192,14 @@ Sem esse arquivo, os hosts são agrupados por `/24`.
 
 - Windows 7 ou mais novo com .NET Framework 4.x (já vem no Windows 10 e 11).
 - Permissão para enviar ICMP (ping) aos hosts.
+
+## Histórico de alterações
+
+### 30/10/2026
+
+- **Primeira versão pública** do UltraPing e do UltraPingViewer.
+- **Configuração de fábrica:** o programa vem só com `localhost` e `127.0.0.1` e começa a pingar ao abrir. Perfis novos sem `config.ini` são criados assim.
+- **`PingAutoStart`:** quando a chave não existe no `config.ini`, agora vale `True`.
+- **Logos:** verde para o UltraPing e azul para o UltraPingViewer, em SVG, PNG e ICO na pasta `assets`. Os ícones ficam nos `.exe` e nas janelas.
+- **`compilar.bat`:** agora gera os dois programas, cada um com o seu ícone.
+- **`.gitattributes`:** mantém os arquivos `.bat` com quebra de linha do Windows.
