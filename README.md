@@ -28,7 +28,7 @@ São dois programas de janela (WinForms), cada um com um único arquivo de códi
 - **Proteção contra falso alerta**: quando um ping falha, o programa faz mais `ConfirmPings` pings (padrão 2) antes de alertar. Se algum responder, o host **oscilou**: o painel fica **amarelo** por alguns minutos, sem som, sem subir e sem e-mail. Só fica **vermelho** quando todos os pings falham.
 - **Som**: bipe de 1000 Hz por 150 ms em queda confirmada, no máximo um a cada 2 segundos.
 - **Botão "Desativar"** nos painéis vermelhos: grava `Enabled=False` e tira o host da tela.
-- **Verificação automática dos desativados**: ao abrir o programa **e** uma vez por dia, no horário configurado, todos os hosts desativados são testados em silêncio, e os que responderem voltam a ser monitorados.
+- **Verificação automática dos desativados**: ao abrir o programa **e** no agendamento escolhido, todos os hosts desativados são testados em silêncio, e os que responderem voltam a ser monitorados. São duas opções: uma vez por dia, em um horário, ou com frequência, a cada N horas.
 - **Log CSV** de cada ping, por host e por dia.
 - **Alertas por e-mail** (SMTP) com limite por minuto e por hora.
 - **Perfis**: cada perfil tem sua lista de hosts e seus logs.
@@ -149,9 +149,12 @@ Vão até 512 hosts. O número no título do painel é a posição do host no ar
 | | `AutoScroll` | True | Rolar o painel automaticamente |
 | | `PingResultsView` | Compact | `Basic`, `Compact`, `Minimal` ou `Detailed` |
 | | `MaxLines` | 500 | Linhas guardadas por painel |
-| `[Recheck]` | `Enabled` | True | Testar os desativados ao abrir e uma vez por dia |
-| | `Time` | 08:00 | Horário do teste diário (HH:mm) |
-| | `LastRun` | (automático) | Data do último teste |
+| `[Recheck]` | `Enabled` | True | Testar os desativados ao abrir e no agendamento |
+| | `Mode` | Daily | `Daily` = uma vez por dia; `Interval` = a cada N horas |
+| | `Time` | 08:00 | Horário do teste no modo `Daily` (HH:mm) |
+| | `EveryHours` | 2 | Frequência do teste no modo `Interval`, em horas (de 1 a 168) |
+| | `LastRun` | (automático) | Data do último teste no modo `Daily` |
+| | `LastRunAt` | (automático) | Data e hora do último teste no modo `Interval` |
 | `[Mail]` | `MailAlerts` | False | Enviar alertas por e-mail |
 | | `SendAfter` | 3 | Falhas confirmadas seguidas para enviar |
 | | `MaxPerMinute` / `MaxPerHour` | 1 / 10 | Limites de envio por host (0 = sem limite) |
@@ -194,6 +197,10 @@ Sem esse arquivo, os hosts são agrupados por `/24`.
 - Permissão para enviar ICMP (ping) aos hosts.
 
 ## Histórico de alterações
+
+### 02/11/2026
+
+- **Teste dos hosts desativados:** agora tem duas opções em **Opções → Geral**: uma vez por dia, em um horário, ou com frequência, a cada N horas. O modo diário continua sendo o padrão.
 
 ### 30/10/2026
 

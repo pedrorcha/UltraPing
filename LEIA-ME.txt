@@ -46,12 +46,15 @@ COMO USAR
 - Som: o mesmo do 33Ping original (tom de 1000 Hz por 150 ms), no maximo 1 bipe a cada 2 s.
 - Botao "Desativar": aparece so nos paineis vermelhos (canto superior direito, abaixo do titulo).
   Grava Enabled=False no config.ini e tira o painel da tela.
-- Verificacao dos desativados: sempre que o programa abre E 1 vez por dia, no horario de
-  [Recheck] Time (padrao 08:00), o programa testa TODOS os hosts desativados (3 pings cada) e
-  reativa sozinho os que responderem. O painel volta no fim da fila.
+- Verificacao dos desativados: sempre que o programa abre E no agendamento escolhido, o programa
+  testa TODOS os hosts desativados (3 pings cada) e reativa sozinho os que responderem.
+  O painel volta no fim da fila.
+  Duas opcoes em Opcoes > Geral:
+    1) Uma vez por dia, no horario escolhido (padrao 08:00).
+    2) Com frequencia, a cada N horas (exemplo: a cada 2 horas; vale de 1 a 168).
   O teste e silencioso: nao toca som, nao grava log e nao manda e-mail.
-  Chaves no config.ini:  [Recheck]  Enabled=True   Time=08:00   LastRun=(data da ultima vez, automatico)
-  Tambem da para mudar em Opcoes > Geral.
+  Chaves no config.ini:  [Recheck]  Enabled=True   Mode=Daily (ou Interval)   Time=08:00   EveryHours=2
+  LastRun e LastRunAt sao preenchidas automaticamente.
 
 ULTRAPINGVIEWER (DASHBOARD)
 - Le todos os logs CSV de Profiles\<perfil>\Logs (pode ficar aberto junto com o UltraPing).

@@ -197,9 +197,13 @@ namespace UltraPing
         public int Columns = 0;           // 0 = automatico
         public bool HideEmpty = false;
         public int PromoteAfter = 1;      // falhas seguidas para o host subir ao topo
-        public bool RecheckDisabled = true;   // testar 1 vez por dia os desativados e reativar os que responderem
+        public bool RecheckDisabled = true;   // testar os desativados e reativar os que responderem
+        public bool RecheckByInterval = false; // false = 1 vez por dia no horario; true = a cada N horas
         public string RecheckTime = "08:00";  // horario da verificacao diaria (HH:mm)
-        public string RecheckLastRun = "";    // data (yyyy-MM-dd) da ultima verificacao
+        public int RecheckEveryHours = 2;     // frequencia da verificacao periodica, em horas
+        public string RecheckLastRun = "";    // data (yyyy-MM-dd) da ultima verificacao diaria
+        public string RecheckLastRunAt = "";  // data e hora da ultima verificacao periodica
+        const string RecheckStampFormat = "yyyy-MM-dd HH:mm:ss";
         public List<HostEntry> Hosts = new List<HostEntry>();
         public int PingInterval = 1000;
         public int PingTimeout = 2000;
@@ -283,6 +287,26 @@ namespace UltraPing
             return true;
         }
 
+        // modo "a cada N horas": ja deu a hora de testar de novo?
+        public bool RecheckIntervalDue(DateTime now)
+        {
+            DateTime last;
+            if (!DateTime.TryParseExact(RecheckLastRunAt, RecheckStampFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out last)) return true;
+            if (last > now) return true;   // o relogio voltou
+            return (now - last).TotalHours >= RecheckEveryHours;
+        }
+
+        public void MarkRecheckRun(DateTime now)
+        {
+            RecheckLastRunAt = now.ToString(RecheckStampFormat, CultureInfo.InvariantCulture);
+        }
+
+        public string RecheckScheduleText()
+        {
+            if (!RecheckByInterval) return "1 vez por dia às " + RecheckTime;
+            return "a cada " + RecheckEveryHours + (RecheckEveryHours == 1 ? " hora" : " horas");
+        }
+
         public static string Escape(string s)
         {
             if (s == null) return "";
@@ -318,6 +342,9 @@ namespace UltraPing
             c.RecheckDisabled = ini.GetBool("Recheck", "Enabled", true);
             c.RecheckTime = ini.Get("Recheck", "Time", c.RecheckTime).Trim();
             c.RecheckLastRun = ini.Get("Recheck", "LastRun", "").Trim();
+            c.RecheckByInterval = ini.Get("Recheck", "Mode", "Daily").Trim().Equals("Interval", StringComparison.OrdinalIgnoreCase);
+            c.RecheckEveryHours = Clamp(ini.GetInt("Recheck", "EveryHours", c.RecheckEveryHours), 1, 168);
+            c.RecheckLastRunAt = ini.Get("Recheck", "LastRunAt", "").Trim();
             for (int i = 1; i <= MaxHosts; i++)
             {
                 HostEntry h = new HostEntry();
@@ -400,6 +427,9 @@ namespace UltraPing
             ini.Set("Recheck", "Enabled", RecheckDisabled);
             ini.Set("Recheck", "Time", RecheckTime);
             ini.Set("Recheck", "LastRun", RecheckLastRun);
+            ini.Set("Recheck", "Mode", RecheckByInterval ? "Interval" : "Daily");
+            ini.Set("Recheck", "EveryHours", RecheckEveryHours);
+            ini.Set("Recheck", "LastRunAt", RecheckLastRunAt);
             ini.Save();
         }
     }
@@ -1241,7 +1271,7 @@ namespace UltraPing
         }
 
         // botao "Desativar" do painel vermelho: grava Enabled=False e tira o painel da tela.
-        // A verificacao diaria reativa o host sozinha se ele voltar a responder.
+        // A verificacao dos desativados reativa o host sozinha se ele voltar a responder.
         void DisableHost(PingPane p)
         {
             if (p.Index >= cfg.Hosts.Count) return;
@@ -1249,8 +1279,8 @@ namespace UltraPing
             if (h.Address != p.Address || !h.Enabled) return;
             string nome = h.Name.Length > 0 ? h.Name + " (" + h.Address + ")" : h.Address;
             string volta = cfg.RecheckDisabled
-                ? "\n\nEle será testado 1 vez por dia às " + cfg.RecheckTime + " e volta sozinho se responder."
-                : "\n\nA verificação diária está desligada: para voltar, reative nas Opções.";
+                ? "\n\nEle será testado " + cfg.RecheckScheduleText() + " e volta sozinho se responder."
+                : "\n\nA verificação dos desativados está desligada: para voltar, reative nas Opções.";
             if (MessageBox.Show(this, "Desativar " + nome + "?" + volta, "UltraPing", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
             h.Enabled = false;
@@ -1450,9 +1480,19 @@ namespace UltraPing
         void CheckRecheck()
         {
             if (recheckRunning || cfg == null || !cfg.RecheckDisabled) return;
+            DateTime now = DateTime.Now;
+            if (cfg.RecheckByInterval)
+            {
+                // a cada N horas, contando da ultima verificacao; ao abrir sempre testa
+                if (!recheckOnOpen && !cfg.RecheckIntervalDue(now)) return;
+                recheckOnOpen = false;
+                cfg.MarkRecheckRun(now);
+                SaveConfig();
+                StartRecheck();
+                return;
+            }
             TimeSpan at;
             if (!Config.TryParseTime(cfg.RecheckTime, out at)) return;
-            DateTime now = DateTime.Now;
             string today = now.ToString("yyyy-MM-dd");
             if (recheckOnOpen)
             {
@@ -1486,10 +1526,10 @@ namespace UltraPing
             }
             if (items.Count == 0)
             {
-                recheckInfo = "verificação diária " + DateTime.Now.ToString("dd/MM HH:mm") + ": nenhum host desativado";
+                recheckInfo = "verificação dos desativados " + DateTime.Now.ToString("dd/MM HH:mm") + ": nenhum host desativado";
                 return;
             }
-            recheckInfo = "verificação diária: testando " + items.Count + " desativado(s)...";
+            recheckInfo = "verificação dos desativados: testando " + items.Count + " host(s)...";
             recheckRunning = true;
             int timeout = cfg.PingTimeout;
             string prof = profileName;
@@ -1542,7 +1582,7 @@ namespace UltraPing
                 SaveConfig();
                 LayoutPanes();
             }
-            recheckInfo = "verificação diária " + DateTime.Now.ToString("dd/MM HH:mm") + ": " + revived + " de " + items.Count + " reativado(s)";
+            recheckInfo = "verificação dos desativados " + DateTime.Now.ToString("dd/MM HH:mm") + ": " + revived + " de " + items.Count + " reativado(s)";
             UpdateStatus();
         }
 
@@ -1832,6 +1872,7 @@ namespace UltraPing
             bool wasRunning = running;
             StopAll();
             edit.RecheckLastRun = cfg.RecheckLastRun;   // a verificacao pode ter rodado com a janela aberta
+            edit.RecheckLastRunAt = cfg.RecheckLastRunAt;
             cfg = edit;
             SaveConfig();
             BuildPanes();
@@ -1909,6 +1950,8 @@ namespace UltraPing
         NumericUpDown numInterval, numTimeout, numWindows, numColumns, numMaxLines, numPromote, numConfirm, numUnstable;
         CheckBox chkAuto, chkScroll, chkSound, chkTime, chkLog, chkRecheck;
         TextBox txtRecheckTime;
+        RadioButton rbRecheckDaily, rbRecheckEvery;
+        NumericUpDown numRecheckHours;
         ComboBox cmbView;
         CheckBox chkMail, chkSsl;
         NumericUpDown numSendAfter, numPerMin, numPerHour, numPort;
@@ -1969,8 +2012,31 @@ namespace UltraPing
             chkSound = AddChk(tGeral, "Som quando um ping falhar", ref y, c.PlaySounds);
             chkTime = AddChk(tGeral, "Mostrar a hora em cada resultado", ref y, c.ShowTime);
             chkLog = AddChk(tGeral, "Gravar log CSV", ref y, c.LogToFiles);
-            chkRecheck = AddChk(tGeral, "Testar os hosts desativados ao abrir e 1 vez por dia, e reativar os que responderem", ref y, c.RecheckDisabled);
-            txtRecheckTime = AddTxt(tGeral, "Horário do teste (HH:mm)", ref y, c.RecheckTime, false);
+            chkRecheck = AddChk(tGeral, "Testar os hosts desativados ao abrir e reativar os que responderem", ref y, c.RecheckDisabled);
+            rbRecheckDaily = AddRadio(tGeral, "Uma vez por dia, no horário (HH:mm)", y, !c.RecheckByInterval);
+            txtRecheckTime = new TextBox();
+            txtRecheckTime.Text = c.RecheckTime;
+            txtRecheckTime.SetBounds(400, y, 150, 24);
+            tGeral.Controls.Add(txtRecheckTime);
+            y += 30;
+            rbRecheckEvery = AddRadio(tGeral, "Com frequência, a cada N horas", y, c.RecheckByInterval);
+            numRecheckHours = new NumericUpDown();
+            numRecheckHours.Minimum = 1;
+            numRecheckHours.Maximum = 168;
+            numRecheckHours.Value = c.RecheckEveryHours;
+            numRecheckHours.SetBounds(400, y, 150, 24);
+            tGeral.Controls.Add(numRecheckHours);
+            y += 30;
+            EventHandler syncRecheck = delegate
+            {
+                rbRecheckDaily.Enabled = rbRecheckEvery.Enabled = chkRecheck.Checked;
+                txtRecheckTime.Enabled = chkRecheck.Checked && rbRecheckDaily.Checked;
+                numRecheckHours.Enabled = chkRecheck.Checked && rbRecheckEvery.Checked;
+            };
+            chkRecheck.CheckedChanged += syncRecheck;
+            rbRecheckDaily.CheckedChanged += syncRecheck;
+            rbRecheckEvery.CheckedChanged += syncRecheck;
+            syncRecheck(null, EventArgs.Empty);
 
             // ---- E-mail ----
             y = 16;
@@ -2232,6 +2298,16 @@ namespace UltraPing
             return c;
         }
 
+        RadioButton AddRadio(Control parent, string label, int y, bool value)
+        {
+            RadioButton r = new RadioButton();
+            r.Text = label;
+            r.Checked = value;
+            r.SetBounds(36, y, 360, 22);
+            parent.Controls.Add(r);
+            return r;
+        }
+
         TextBox AddTxt(Control parent, string label, ref int y, string value, bool password)
         {
             Label l = new Label();
@@ -2250,7 +2326,8 @@ namespace UltraPing
         bool Apply()
         {
             TimeSpan rt;
-            if (!Config.TryParseTime(txtRecheckTime.Text, out rt))
+            bool rtOk = Config.TryParseTime(txtRecheckTime.Text, out rt);
+            if (!rtOk && rbRecheckDaily.Checked)
             {
                 MessageBox.Show(this, "Horário do teste diário inválido. Use HH:mm (ex.: 08:00).", "Opções");
                 return false;
@@ -2287,7 +2364,9 @@ namespace UltraPing
             cfg.ShowTime = chkTime.Checked;
             cfg.LogToFiles = chkLog.Checked;
             cfg.RecheckDisabled = chkRecheck.Checked;
-            cfg.RecheckTime = rt.Hours.ToString("00") + ":" + rt.Minutes.ToString("00");
+            cfg.RecheckByInterval = rbRecheckEvery.Checked;
+            cfg.RecheckEveryHours = (int)numRecheckHours.Value;
+            if (rtOk) cfg.RecheckTime = rt.Hours.ToString("00") + ":" + rt.Minutes.ToString("00");
             cfg.MailAlerts = chkMail.Checked;
             cfg.SendAfter = (int)numSendAfter.Value;
             cfg.MaxPerMinute = (int)numPerMin.Value;
